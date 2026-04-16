@@ -28,9 +28,12 @@ const io = new Server(server, {
 
 
 app.use(cors({
-    origin:'http://localhost:5173',
-    credentials:true
-}))
+    origin: [
+        'http://localhost:5173', 
+        'https://your-frontend-link.vercel.app' // should add vercel link here
+    ],
+    credentials: true
+}));
 connectDB()
 
 app.use(express.json())
