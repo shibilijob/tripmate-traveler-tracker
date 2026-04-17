@@ -28,7 +28,7 @@ const io = new Server(server, {
 
 
 app.use(cors({
-    origin: "*", // accept every link
+    origin: process.env.FRONTEND_URL,
     credentials: true
 }));
 connectDB()
