@@ -125,17 +125,16 @@ const deleteUser = async (req, res) => {
             return res.status(403).json({ message: "Action denied. Cannot delete admin accounts." });
         }
 
-        // Cast error ഒഴിവാക്കാൻ string id-യെ ObjectId ആക്കി മാറ്റുന്നു
+        // to remove cast error
         const userObjectId = new mongoose.Types.ObjectId(id);
 
-        // 1. ഈ യൂസർ Leader ആയ റൂമുകൾ ബ്ലോക്ക് ചെയ്യുന്നു
+        // 1. block the room where user is leader
         await TripRoom.updateMany(
             { roomLeaderId: id }, 
             { $set: { roomStatus: 'blocked' } }
         );
 
-        // 2. ഈ യൂസർ മെമ്പർ ആയിട്ടുള്ള എല്ലാ റൂമുകളിൽ നിന്നും നീക്കം ചെയ്യുന്നു
-        // ഇവിടെ userObjectId ഉപയോഗിക്കുന്നത് വഴി Cast Error ഒഴിവാക്കാം
+        // 2. delete user from every rooms
         await TripRoom.updateMany(
             { members: userObjectId }, 
             { $pull: { members: userObjectId } } 
@@ -233,9 +232,12 @@ const toggleUserBlockStatus = async (req, res) => {
             return res.status(403).json({ message: "Administrators cannot be blocked" });
         }
 
+        const newStatus = user.status === 'active' ? 'blocked' : 'active';
+        const newRoomStatus = newStatus === 'blocked' ? 'deactivated' : 'active';
+
         const statusTitle = newStatus === 'blocked' ? "Account Deactivated" : "Account Reactivated";
         const statusAction = newStatus === 'blocked' ? "temporarily deactivated" : "successfully reactivated";
-        const statusColor = newStatus === 'blocked' ? "#ff4757" : "#2ed573"; // ബ്ലോക്കിന് ചുവപ്പും, ആക്ടീവിന് പച്ചയും
+        const statusColor = newStatus === 'blocked' ? "#ff4757" : "#2ed573"; 
 
         // 4. Update User status
         user.status = newStatus;
