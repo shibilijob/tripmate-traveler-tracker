@@ -5,7 +5,7 @@ import Login from './components/user/Login'
 import Register from './components/user/Register'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
-import FeaturesPage from './pages/featuresPage'
+import FeaturesPage from './pages/FeaturesPage'
 import ForgotPassword from './components/user/ForgotPassword'
 import ProtectedRoute from './components/common/ProtectedRout'
 
