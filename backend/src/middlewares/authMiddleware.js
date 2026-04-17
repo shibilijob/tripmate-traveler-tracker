@@ -14,9 +14,6 @@ const protect = async(req,res,next)=>{
         if(!user){
             return res.status(401).json({message:'user not found'})
         }
-        // if(user.role === 'admin'){
-        //     return res.status(400).json({message:'access denied'})
-        // }
 
         req.user = user
         next()
