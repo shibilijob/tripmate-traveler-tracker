@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaTrash, FaSearch, FaSync, FaUserCircle, FaLock, FaUnlock } from 'react-icons/fa';
 import ADMIN_API from '../../api/ADMIN_API';
 import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 const AllUsers = () => {
   const [users, setUsers] = useState([]);
@@ -54,16 +55,50 @@ const AllUsers = () => {
     }
   };
   
-
   async function handleBlock(id, currentStatus) {
-    const reason = window.prompt("Enter the reason for blocking this user:");
-  
-    if (!reason) return;
+    let reason = "";
 
+    // 1. ask reason for block
+    if (currentStatus === 'active') {
+      const { value: text, isDismissed } = await Swal.fire({
+        title: 'Block User',
+        input: 'textarea',
+        inputLabel: 'Reason for blocking',
+        inputPlaceholder: 'Type the reason here...',
+        showCancelButton: true,
+        confirmButtonColor: '#ff4757',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Confirm Block',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'You must provide a reason to block a user!';
+          }
+        }
+      });
+
+      if (isDismissed || !text) return; // cancel
+      reason = text;
+    } 
+    
+    // 2. confirmation only for unblock
+    else {
+      const result = await Swal.fire({
+        title: 'Restore Access?',
+        text: "Are you sure you want to reactivate this account?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#2ed573',
+        confirmButtonText: 'Yes, Restore'
+      });
+
+      if (!result.isConfirmed) return;
+    }
+
+    // 3. API Call
     try {
-      await ADMIN_API.patch(`/blockAndUnblock/${id}`,{ reason }); 
-      // Dynamic toast message based on what the action was
-      toast.info(currentStatus === 'active' ? 'USER RESTRICTED  AND NOTIFIED' : 'USER ACCESS RESTORED');
+      await ADMIN_API.patch(`/blockAndUnblock/${id}`, { reason });
+      
+      toast.info(currentStatus === 'active' ? 'USER RESTRICTED AND NOTIFIED' : 'USER ACCESS RESTORED');
       fetchAllUsers(); 
     } catch (error) {
       toast.error('Failed to update user status');

@@ -55,38 +55,12 @@ const NavBar = () => {
               {/* Profile Trigger */}
               <div 
                 className="hidden md:flex items-center gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors"
-                onClick={() => setShowDropdown(!showDropdown)}
+                onClick={() => navigate('/UserProfile')}
               >
                 <FaUserCircle className="text-2xl text-[#11889c]" />
                 <span className="font-medium text-gray-700">{user.userName}</span>
               </div>
 
-              {/* Desktop Dropdown Menu */}
-              {showDropdown && (
-                <>
-                  {/* Invisible backdrop to close dropdown when clicking outside */}
-                  <div 
-                    className="fixed inset-0 z-10" 
-                    onClick={() => setShowDropdown(false)}
-                  ></div>
-                  
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl py-2 z-20 animate-in fade-in zoom-in duration-200">
-                    <button 
-                      onClick={() => { navigate('/UserProfile'); setShowDropdown(false); }}
-                      className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 w-full text-left"
-                    >
-                      <FaUser className="text-[#11889c]" /> Profile
-                    </button>
-                    <hr className="my-1 border-gray-100" />
-                    <button 
-                      onClick={handleLogout}
-                      className="flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 w-full text-left"
-                    >
-                      <FaSignOutAlt /> Logout
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           ) : (
             <button 

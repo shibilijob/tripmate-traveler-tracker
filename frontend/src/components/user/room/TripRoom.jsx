@@ -471,7 +471,7 @@ const TripRoom = () => {
           {/* Mobile Chat Trigger */}
           <button 
             onClick={() => setIsSidebarOpen(true)}
-            className="lg:hidden absolute bottom-24 right-6 w-14 h-14 bg-[#11889c] text-white rounded-2xl shadow-2xl flex items-center justify-center z-400 active:scale-95"
+            className="lg:hidden absolute bottom-24 right-6 w-14 h-14 bg-[#11889c] text-white rounded-2xl shadow-2xl flex items-center justify-center z-300 active:scale-95"
           >
             <FaComments size={22}/>
           </button>
@@ -486,7 +486,7 @@ const TripRoom = () => {
 
         {/* --- RIGHT SIDEBAR: CHAT & MEMBERS --- */}
         <div className={`
-          fixed lg:relative inset-y-0 right-0 z-[60] lg:z-10 w-full sm:w-85 bg-white border-l border-slate-100 shadow-2xl flex flex-col transition-transform duration-300
+          fixed lg:relative inset-y-0 right-0 z-[310] lg:z-10 w-full sm:w-85 bg-white border-l border-slate-100 shadow-2xl flex flex-col transition-transform duration-300
           ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
         `}>
           {/* Mobile Sidebar */}

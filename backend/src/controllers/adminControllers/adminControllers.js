@@ -276,9 +276,13 @@ const toggleUserBlockStatus = async (req, res) => {
                             <p style="margin: 5px 0 0 0; color: ${statusColor}; font-size: 18px; font-weight: bold;">${newStatus.toUpperCase()}</p>
                             ${newStatus === 'blocked' ? `
                             <p style="margin: 15px 0 0 0; color: #555; font-size: 14px; border-top: 1px solid #eee; padding-top: 10px;">
-                                <strong>Reason:</strong> ${reason || "Violation of community guidelines."}
+                                <strong>Reason for Deactivation:</strong> ${reason || "Violation of community guidelines."}
                             </p>
-                            ` : ''}
+                            ` : `
+                            <p style="margin: 15px 0 0 0; color: #2ed573; font-size: 14px; border-top: 1px solid #eee; padding-top: 10px;">
+                                <strong>Note:</strong> Your account has been reviewed and reactivated.
+                            </p>
+                            `}
                         </td>
                         </tr>
                     </table>
