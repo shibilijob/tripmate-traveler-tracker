@@ -1,4 +1,5 @@
 import Location from "../../models/Location.js";
+import Notification from "../../models/Notification.js";
 import TripRoom from "../../models/TripRoom.js";
 import User from "../../models/User.js";
 import { customAlphabet } from 'nanoid';
@@ -157,7 +158,7 @@ const handleInviteAction = async (req, res) => {
             
             await room.save();
 
-            // 2. Location കളക്ഷനിൽ ഈ പുതിയ മെമ്പറെ കൂടി ചേർക്കുന്നു
+            // 2. add the user in location collection
             await Location.findOneAndUpdate({ tripRoomId: roomId },
                 { 
                     $push: { 
@@ -169,6 +170,16 @@ const handleInviteAction = async (req, res) => {
                     }
                 }
             );
+
+            // --- SAVE NOTIFICATION (ACCEPT) ---
+            await Notification.create({
+                recipient: targetUserId,
+                sender: leaderId,
+                roomId: roomId,
+                message: `Your request to join "${room.tripName}" was accepted!`,
+                type: 'invite_accepted',
+                roomId: roomId
+            });
 
 
             return res.status(200).json({ success: true, message: "User accepted into the squad!", room });
@@ -406,5 +417,36 @@ const sendTripInvite = async (req, res) => {
     }
 };
 
+const getNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find({
+      recipient: req.user._id
+    }).sort({ createdAt: -1 });
 
-export {createRoom, joinRoom, getRoomDetails, getMyRooms, viewRoom, updateVisibility, updateTripStatus, handleInviteAction, sendTripInvite };
+    if (notifications.length === 0) {
+      return res.status(404).json({ message: "No notifications found" });
+    }
+
+    res.status(200).json(notifications);
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const markAllAsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { recipient: req.user._id, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    res.status(200).json({ message: "All notifications marked as read" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+export {createRoom, joinRoom, getRoomDetails, getMyRooms, viewRoom, updateVisibility, updateTripStatus, handleInviteAction, sendTripInvite, getNotifications, markAllAsRead };

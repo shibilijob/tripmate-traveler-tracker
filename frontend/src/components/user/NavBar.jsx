@@ -50,6 +50,16 @@ const NavBar = () => {
 
         {/* Action Area */}
         <div className="flex items-center gap-4">
+
+          {/* Bell Icon */}
+          {user && (
+            <FaBell 
+              className="text-xl text-[#11889c] cursor-pointer"
+              onClick={() => navigate('/notifications')}
+            />
+            
+          )}
+          
           {user ? (
             <div className="relative">
               {/* Profile Trigger */}

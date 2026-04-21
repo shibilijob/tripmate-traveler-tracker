@@ -16,6 +16,8 @@ router.patch('/handleInvite', protect, handleInviteAction);
 router.patch('/visibility/:roomId', protect, updateVisibility)
 router.patch('/status/:roomId', protect, updateTripStatus)
 router.get('/myProfile',protect,getProfile)
+router.get('/notifications',protect,getNotifications)
+router.patch('/notifications/markRead', protect, markAllAsRead);
 router.patch('/updateProfile',protect,updateProfile)
 router.get('/chatHistory/:roomId',getChatHistory)
 

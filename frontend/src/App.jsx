@@ -18,6 +18,7 @@ import RoomsPage from './pages/RoomsPage'
 import TripRoom from './components/user/room/TripRoom'
 import RoomEntrance from './components/user/room/RoomEntrance'
 import PublicRoute from './components/common/PublicRoute'
+import NotificationsPage from './components/user/NotificationsPage'
 
 
 function App() {
@@ -67,6 +68,14 @@ function App() {
             <Route path="users" element={<AllUsers />} />
             
           </Route>
+          <Route
+            path='/notifications'
+            element={
+              <ProtectedRoute roles={["member", "roomLeader"]}>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path='/UserProfile'
             element={
