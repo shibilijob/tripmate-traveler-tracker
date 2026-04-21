@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaBars, FaTimes, FaUserCircle, FaSignOutAlt, FaUser } from "react-icons/fa";
+import { FaBars, FaTimes, FaUserCircle, FaSignOutAlt, FaUser, FaBell } from "react-icons/fa";
 import logo from "../../assets/tripMate_logo.png";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -53,7 +53,7 @@ const NavBar = () => {
 
           {/* Bell Icon */}
           {user && (
-            <FaBell 
+            <FaBell
               className="text-xl text-[#11889c] cursor-pointer"
               onClick={() => navigate('/notifications')}
             />
