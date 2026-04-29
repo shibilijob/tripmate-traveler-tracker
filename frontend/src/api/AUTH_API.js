@@ -1,8 +1,11 @@
 import axios from "axios";
+import { setupInterceptors } from "./interceptor";
 
-const API = axios.create({
+const AUTH_API = axios.create({
  baseURL: `${import.meta.env.VITE_BACKEND_URL}/auth`,
   withCredentials: true
 })
 
-export default API;
+setupInterceptors(AUTH_API)
+
+export default AUTH_API;

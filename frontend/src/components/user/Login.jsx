@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { FaEnvelope, FaEye, FaEyeSlash, FaFacebook, FaGoogle, FaLock } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
-import API from '../../api/AUTH_API'
 import { toast } from 'react-toastify'
 import { useDispatch } from 'react-redux'
 import { loginSuccess } from '../../redux/slices/authSlice'
+import AUTH_API from '../../api/AUTH_API'
+import { GoogleLogin } from '@react-oauth/google';
 
 
 function Login() {
@@ -25,6 +26,45 @@ function Login() {
             [e.target.name]:e.target.value
         })
     }
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+        try {
+            setLoading(true);
+            setError('');
+            
+            // Backend-ilekku token ayakkunnu
+            const { data } = await AUTH_API.post('/google-login', { 
+                token: credentialResponse.credential 
+            });
+
+            if (data.token) {
+                localStorage.setItem("token", data.token);
+            }
+            
+            dispatch(loginSuccess(data.userData));
+
+            const pendingCode = localStorage.getItem('pendingJoinCode');
+
+            if (data.userData.role === "admin") {
+                navigate("/admin");
+                toast.success('Logged in as admin');
+            } else if (pendingCode) {
+                localStorage.removeItem('pendingJoinCode');
+                navigate(`/join/${pendingCode}`);
+                toast.success('Login success! Joining your trip...');
+            } else {
+                navigate("/");
+                toast.success('Login success');
+            }
+        } catch (error) {
+            console.error("Google Error:", error);
+            setError('Google login failed. Please try again.');
+            toast.error('Authentication failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     async function handleSubmit(e) {
         e.preventDefault();
         if (!formData.email || !formData.password) {
@@ -33,7 +73,12 @@ function Login() {
         try {
             setLoading(true)
             setError('')
-            const { data } = await API.post('/login', formData)
+            const { data } = await AUTH_API.post('/login', formData)
+
+            // SAVE TOKEN (fallback)
+            if (data.token) {
+                localStorage.setItem("token", data.token);
+            }
             
             // 1. Save to Redux
             dispatch(loginSuccess(data.userData));
@@ -121,10 +166,14 @@ function Login() {
             </div>
 
             {/* SOCIAL LOGIN */}
-            <div className="flex gap-4">
-                <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white/20 cursor-pointer hover:bg-white/30 transition">
-                    <FaGoogle /> Continue with Google
-                </button>
+            <div className="flex justify-center w-full">
+                <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => toast.error('Google Login Failed')}
+                    theme="filled_blue" // Custom design-u cherunnu
+                    shape="pill"        // to get rounded shape
+                    // width="100%"       // to set button full width
+                />
             </div>
 
             <p

@@ -19,6 +19,7 @@ import TripRoom from './components/user/room/TripRoom'
 import RoomEntrance from './components/user/room/RoomEntrance'
 import PublicRoute from './components/common/PublicRoute'
 import NotificationsPage from './components/user/NotificationsPage'
+import NotFoundPage from './components/common/NotFoundPage'
 
 
 function App() {
@@ -101,6 +102,7 @@ function App() {
           />
 
           <Route path='/join/:roomCode' element={<RoomEntrance />}/>
+          <Route path='*' element={<NotFoundPage />} />
 
         </Routes>
     </div>

@@ -27,6 +27,8 @@ const io = new Server(server, {
   },
 });
 
+app.set("io", io);
+
 
 app.use(cors({
     origin: process.env.FRONTEND_URL,
@@ -111,6 +113,11 @@ io.on("connection", (socket) => {
             // Optional: emit an error back to the sender
             socket.emit("error", "Message could not be saved.");
         }
+    });
+
+    // SOS alert logic
+    socket.on("send_sos", (data) => {
+        socket.to(data.roomId).emit("receive_sos", data);
     });
 
     // LIVE LOCATION TRACKING

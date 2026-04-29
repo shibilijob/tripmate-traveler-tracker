@@ -92,11 +92,11 @@ const RoomsList = () => {
             <p className="font-black text-slate-300 animate-pulse text-2xl uppercase italic">Syncing Database...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
             {filteredRooms.map((room) => (
               <div 
                 key={room._id} 
-                className="bg-white p-6 rounded-[2rem] shadow-sm border border-cyan-100 hover:shadow-xl hover:-translate-y-1 transition-all group flex-1 min-w-[320px] max-w-[400px] h-[230px]"
+                className="bg-white p-6 rounded-[2rem] shadow-sm border border-cyan-100 hover:shadow-xl hover:-translate-y-1 transition-all group flex-1  h-[230px]"
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="bg-[#11889c]/10 p-3 rounded-2xl text-[#11889c] group-hover:bg-[#11889c] group-hover:text-white transition-colors">

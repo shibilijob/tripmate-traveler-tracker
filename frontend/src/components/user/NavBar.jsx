@@ -4,7 +4,7 @@ import logo from "../../assets/tripMate_logo.png";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../redux/slices/authSlice";
-import API from "../../api/AUTH_API";
+import AUTH_API from "../../api/AUTH_API";
 
 const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false); // Mobile menu state
@@ -17,7 +17,7 @@ const NavBar = () => {
   const navigate = useNavigate();
 
   const handleLogout =async () => {
-    await API.post('/logout', {}, { withCredentials: true })
+    await AUTH_API.post('/logout', {}, { withCredentials: true })
     dispatch(logout())
     setShowDropdown(false);
     navigate('/login');

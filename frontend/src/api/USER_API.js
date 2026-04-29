@@ -1,9 +1,11 @@
 import axios from 'axios';
+import { setupInterceptors } from "./interceptor";
 
-const API = axios.create({
-  // Use import.meta.env for Vite projects
+const USER_API = axios.create({
   baseURL: `${import.meta.env.VITE_BACKEND_URL}/user`, 
   withCredentials: true
 });
 
-export default API;
+setupInterceptors(USER_API)
+
+export default USER_API;

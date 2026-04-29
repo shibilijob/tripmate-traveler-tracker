@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { FaEnvelope, FaLock, FaKey } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
-import API from '../../api/AUTH_API'
 import { toast } from 'react-toastify'
+import AUTH_API from '../../api/AUTH_API'
 
 function ForgotPassword() {
   const [step, setStep] = useState(1) // 1=email, 2=otp, 3=new password
@@ -18,7 +18,7 @@ function ForgotPassword() {
     if (!email) return setError('Enter your email')
     try {
       setLoading(true)
-      await API.post('/forgot_password', { email })
+      await AUTH_API.post('/forgot_password', { email })
       toast.success('OTP sent to your email')
       setStep(2)
     } catch {
@@ -33,7 +33,7 @@ function ForgotPassword() {
     if (!otp) return setError('Enter OTP')
     try {
       setLoading(true)
-      await API.post('/verify_otp', { email, otp })
+      await AUTH_API.post('/verify_otp', { email, otp })
       toast.success('OTP verified')
       setStep(3)
     } catch {
@@ -48,7 +48,7 @@ function ForgotPassword() {
     if (!newPassword) return setError('Enter new password')
     try {
       setLoading(true)
-      await API.post('/reset_password', { email, otp, newPassword })
+      await AUTH_API.post('/reset_password', { email, otp, newPassword })
       toast.success('Password reset successful!')
       navigate('/login')
     } catch {

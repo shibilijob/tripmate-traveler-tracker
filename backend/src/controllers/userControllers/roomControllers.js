@@ -1,5 +1,6 @@
 import Location from "../../models/Location.js";
 import Notification from "../../models/Notification.js";
+import SOS from "../../models/SOS.js";
 import TripRoom from "../../models/TripRoom.js";
 import User from "../../models/User.js";
 import { customAlphabet } from 'nanoid';
@@ -69,51 +70,86 @@ const createRoom = async (req, res) => {
 
 const joinRoom = async (req, res) => {
   try {
-    const { roomCode } = req.body;
+    const { roomCode, action } = req.body;
     const userId = req.user._id;
+    const userEmail = req.user.email;
 
     if (!roomCode) {
-        return res.status(400).json({ message: "Room code is required" });
+      return res.status(400).json({ message: "Room code is required" });
     }
 
     const room = await TripRoom.findOne({ roomCode: roomCode.toUpperCase() });
     if (!room) return res.status(404).json({ message: "Room not found" });
 
-
     if (room.status === 'completed') {
-            return res.status(400).json({ message: "This trip has already ended." });
-        }
+      return res.status(400).json({ message: "This trip has already ended." });
+    }
 
-    // Check if user is already in the room
+    // 1. Check if user is already in the room
     const isAlreadyMember = room.members.some(
-        (member) => member.userId.toString() === userId.toString()
+      (member) => member.userId.toString() === userId.toString()
     );
 
     if (isAlreadyMember) {
-        return res.status(400).json({ 
-            message: "You are already a member of this room", 
-            room 
-        });
+      return res.status(400).json({ 
+        message: "You are already a member of this room", 
+        room 
+      });
     }
 
-    if(room.members.length == 5){
-        return res.status(403).json({message:'This room has reached its limit of 5 members.'})
+    // 2. Check room limit
+    if (room.members.length >= 5) {
+      return res.status(403).json({ message: 'This room has reached its limit of 5 members.' });
     }
 
-    // 2. Check if already invited/pending
+    // checking email invitation
+    const isInvitedByEmail = room.invitedByEmail?.some(
+        (invite) => invite.email === userEmail && invite.status === "pending"
+    );
+
+    if (isInvitedByEmail) {
+      room.members.push({
+        userId: userId,
+        userName: req.user.userName,
+      });
+
+    const invite = room.invitedByEmail.find(
+        (i) => i.email === userEmail && i.status === "pending"
+    );
+
+    if (invite) {
+        invite.status = "accepted";
+    }
+
+    await room.save();
+    return res.status(200).json({ 
+        success: true, 
+        message: "Successfully joined the room via email invitation!", 
+        room 
+      });
+    } 
+
+    // whatsapp invite
+
+    // check if already rejected
+    const alreadyRejected = room.invites.some(i => i.userId.toString() === userId.toString() && i.status === 'rejected');
+    if (alreadyRejected) return res.status(400).json({ message: "Request previously rejected" });
+    // 4. Check if already invited/pending in 'invites' array
     const alreadyInvited = room.invites.some(i => i.userId.toString() === userId.toString() && i.status === 'pending');
     if (alreadyInvited) return res.status(400).json({ message: "Request already pending" });
 
-    // Add to INVITES array
+    // Add to INVITES array (for WhatsApp/Manual Code joiners)
     room.invites.push({
       userId: userId,
       userName: req.user.userName,
-      email: req.user.email
+      email: userEmail
     });
 
     await room.save();
     res.status(200).json({ success: true, message: "Request sent to leader!" });
+
   } catch (error) {
+    console.error("Join Room Error:", error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -358,9 +394,18 @@ const sendTripInvite = async (req, res) => {
     try {
         const { email, tripName, roomCode } = req.body;
         const senderName = req.user.userName; // From your auth middleware
-        // const joinLink = `${process.env.FRONTEND_URL}/join/${roomCode}`;
         const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const joinLink = `${baseUrl}/join/${roomCode}`;
+        // const joinLink = `${baseUrl}/join/${roomCode}`;
+        const joinLink = `${baseUrl}/join/${roomCode}?email=${encodeURIComponent(email)}`;
+
+        const room = await TripRoom.findOne({ roomCode });
+        if (!room) return res.status(404).json({ error: "room not found" });
+
+        const alreadyInvited = room.invitedByEmail.find(inv => inv.email === email);
+        if (!alreadyInvited) {
+            room.invitedByEmail.push({ email, status: 'pending' });
+            await room.save();
+        }
 
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -448,5 +493,105 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
+// remove member from room by roomLeader
+const removeMember = async (req, res) => {
+  try {
+    const leaderId = req.user._id;
+    const { roomId, memberId } = req.body;
 
-export {createRoom, joinRoom, getRoomDetails, getMyRooms, viewRoom, updateVisibility, updateTripStatus, handleInviteAction, sendTripInvite, getNotifications, markAllAsRead };
+    // Find room
+    const room = await TripRoom.findById(roomId);
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    // Check if requester is leader
+    if (room.roomLeaderId.toString() !== leaderId.toString()) {
+      return res.status(403).json({ message: "Only leader can remove members" });
+    }
+
+    // Prevent leader removing themselves
+    if (leaderId.toString() === memberId.toString()) {
+      return res.status(400).json({ message: "Leader cannot remove themselves" });
+    }
+
+    // Check if member exists in room
+    const isMember = room.members.some(
+    (m) => m.userId.toString() === memberId.toString()
+    );
+
+    if (!isMember) {
+    return res.status(400).json({ message: "User not in room" });
+    }
+
+    // Remove member
+    await TripRoom.updateOne(
+        { _id: roomId },
+        { $pull: { members: { userId: memberId } } }
+    );
+
+    // Get names for message
+    const leader = await User.findById(leaderId).select("userName");
+
+    // Create notification
+    await Notification.create({
+      recipient: memberId,
+      sender: leaderId,
+      type: "REMOVED_FROM_ROOM",
+      message: `${leader.userName} removed you from ${room.tripName}`,
+      roomId
+    });
+
+    // Emit socket event
+    const io = req.app.get("io");
+
+    io.to(memberId.toString()).emit("removedFromRoom", {
+      roomId,
+      message: "You were removed from the room"
+    });
+
+    res.status(200).json({ message: "Member removed successfully" });
+
+  } catch (err) {
+    console.error("REMOVE MEMBER ERROR:", err);
+  res.status(500).json({ message: err.message });
+  }
+};
+
+// SAVE NEW SOS
+const createSOS = async (req, res) => {
+    try {
+        const { roomId, senderId, senderName, message } = req.body;
+
+        if (!roomId || !senderId || !message) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+        
+        const newSOS = new SOS({
+            roomId,
+            senderId,
+            senderName,
+            message
+        });
+
+        await newSOS.save();
+        res.status(201).json(newSOS);
+    } catch (error) {
+        res.status(500).json({ error: error.message});
+    }
+};
+
+// TO GET ALL SOS OF A TRIPROOM
+const getRoomSOS = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const alerts = await SOS.find({ roomId }).sort({ createdAt: -1 });
+        res.status(200).json(alerts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+export {createRoom, joinRoom, getRoomDetails, getMyRooms, viewRoom, updateVisibility, updateTripStatus, handleInviteAction, sendTripInvite, getNotifications, markAllAsRead, removeMember, createSOS, getRoomSOS };

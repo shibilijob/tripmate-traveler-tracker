@@ -41,7 +41,20 @@ const tripRoomSchema = new mongoose.Schema({
       },
       requestedAt: { type: Date, default: Date.now }
     }
-  ]
+  ],
+
+  invitedByEmail: [
+    {
+      email: String,
+      status: { 
+        type: String, 
+        enum: ['pending', 'accepted', 'rejected'], 
+        default: 'pending' 
+      },
+      requestedAt: { type: Date, default: Date.now }
+    }
+  ],
+
 }, { 
   timestamps: true
 });

@@ -4,6 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from "react-leaflet-cluster"
 import { FaLocationArrow, FaLayerGroup } from 'react-icons/fa';
+import { MdMyLocation } from 'react-icons/md'
 
 // 1. to get My Location
 const LocationButton = ({ coords }) => {
@@ -17,13 +18,13 @@ const LocationButton = ({ coords }) => {
   };
 
   return (
-    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "30px", marginRight: "10px", zIndex: 400 }}>
+    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "60px", marginRight: "30px", zIndex: 400 }}>
       <button 
         onClick={handleRecenter}
         className="p-3 bg-white text-cyan-700 rounded-full shadow-lg hover:bg-cyan-50 cursor-pointer pointer-events-auto border-2 border-white transition-all active:scale-90 flex items-center justify-center"
         title="Find My Location"
       >
-        <FaLocationArrow size={18} />
+        <MdMyLocation size={18} />
       </button>
     </div>
   );
@@ -63,9 +64,11 @@ const createMemberIcon = (userName, color = "#11889c") => {
 const LiveMap = ({ members = [], memberLocations = {}, currentUser }) => {
   const myLoc = memberLocations[currentUser?._id];
   
-  
+  // New States for Loading and Error Handling
+  const [mapInstance, setMapInstance] = useState(null);
+  const [mapError, setMapError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 2. Map Type
   const [mapUrl, setMapUrl] = useState("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
   const [showMapSelector, setShowMapSelector] = useState(false);
 
@@ -74,6 +77,20 @@ const LiveMap = ({ members = [], memberLocations = {}, currentUser }) => {
     { name: 'Satellite', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
     { name: 'Terrain', url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png' }
   ];
+
+  // Function to handle the Retry/Recenter logic
+  const handleRecenterOrRetry = () => {
+    const lat = myLoc?.lat || myLoc?.coords?.lat;
+    const lng = myLoc?.lng || myLoc?.coords?.lng;
+
+    if (mapInstance && lat && lng) {
+      mapInstance.flyTo([lat, lng], 15, { animate: true });
+      setMapError(false);
+    } else {
+      // If map is completely broken, reload the page
+      window.location.reload();
+    }
+  };
 
   const createClusterCustomIcon = (cluster) => {
     const count = cluster.getChildCount();
@@ -85,8 +102,32 @@ const LiveMap = ({ members = [], memberLocations = {}, currentUser }) => {
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-2xl border-4 border-white shadow-2xl">
+    <div className="relative w-full h-full overflow-hidden rounded-2xl border-4 border-white shadow-2xl bg-slate-50">
       
+      {/* --- 1. Lag Loader Overlay --- */}
+      {isLoading && !mapError && (
+        <div className="absolute inset-0 z-[700] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm">
+          <div className="w-10 h-10 border-4 border-slate-200 border-t-[#11889c] rounded-full animate-spin"></div>
+          <p className="mt-3 text-[#11889c] font-bold text-sm animate-pulse">Loading Map...</p>
+        </div>
+      )}
+
+      {/* --- 2. Error/Retry Overlay --- */}
+      {mapError && (
+        <div className="absolute inset-0 z-[600] flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl text-center border-2 border-white">
+            <p className="text-slate-600 mb-4 font-semibold">Connection issue detected</p>
+            <button 
+              onClick={handleRecenterOrRetry}
+              className="flex items-center gap-2 px-6 py-2 bg-[#11889c] text-white rounded-full font-bold shadow-lg hover:bg-[#0e6d7d] transition-all active:scale-95 mx-auto"
+            >
+              <FaLocationArrow size={14} />
+              Recenter & Retry
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* --- Map Type Selector Button --- */}
       <div className="absolute top-22 left-2 z-[100]">
         <button 
@@ -97,7 +138,7 @@ const LiveMap = ({ members = [], memberLocations = {}, currentUser }) => {
         </button>
 
         {showMapSelector && (
-          <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-slate-100 overflow-hidden">
+          <div className="absolute left-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-slate-100 overflow-hidden">
             {mapOptions.map((opt) => (
               <button
                 key={opt.name}
@@ -116,11 +157,28 @@ const LiveMap = ({ members = [], memberLocations = {}, currentUser }) => {
         zoom={13}
         style={{ height: "100%", width: "100%", zIndex: 1 }}
         zoomControl={false}
+        // Capture map instance when ready
+        whenReady={(map) => {
+          setMapInstance(map.target);
+          setIsLoading(false);
+        }}
       >
         <ZoomControl position="topleft" />
         <TileLayer
           attribution='&copy; OpenStreetMap contributors'
           url={mapUrl} 
+          // Event handlers to manage loading and error states
+          eventHandlers={{
+            tileerror: () => {
+              setMapError(true);
+              setIsLoading(false);
+            },
+            tileloadstart: () => setIsLoading(true),
+            tileload: () => {
+              setIsLoading(false);
+              setMapError(false);
+            }
+          }}
         />
 
         {/* My Location */}

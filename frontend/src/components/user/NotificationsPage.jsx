@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import API from '../../api/USER_API';
 import { useNavigate } from 'react-router-dom';
+import USER_API from '../../api/USER_API';
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -8,10 +8,10 @@ const NotificationsPage = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await API.get('/notifications');
+        const res = await USER_API.get('/notifications');
         setNotifications(res.data);
         // mark as read
-        await API.patch('/notifications/markRead');
+        await USER_API.patch('/notifications/markRead');
       } catch (err) {
         console.error("Error fetching notifications", err);
       }

@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { FaEnvelope, FaGoogle, FaLock, FaUser } from 'react-icons/fa'
-import API from '../../api/AUTH_API'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { loginSuccess } from '../../redux/slices/authSlice'
+import AUTH_API from '../../api/AUTH_API'
+import { GoogleLogin } from '@react-oauth/google'
 
 function Register() {
     const[formData,setFormData]=useState({
@@ -24,6 +25,28 @@ function Register() {
         })
     }
 
+    const handleGoogleSuccess = async (credentialResponse) => {
+        try {
+            setLoading(true);
+            const { data } = await AUTH_API.post('/google-login', { 
+                token: credentialResponse.credential 
+            });
+
+            if (data.token) {
+                localStorage.setItem("token", data.token);
+            }
+            
+            dispatch(loginSuccess(data.userData));
+            toast.success("Registration successful");
+            navigate('/');
+        } catch (error) {
+            console.error("Google Auth Error:", error);
+            toast.error('Google registration failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     async function handleSubmit(e){
         e.preventDefault()
         if(!formData.userName || !formData.email || !formData.password){
@@ -35,7 +58,7 @@ function Register() {
 
         try {
             setLoading(true)
-            const {data} = await API.post('/signup',formData)
+            const {data} = await AUTH_API.post('/signup',formData)
             dispatch(loginSuccess(data.userData))
             toast.success("Register successful & logged in")
             setFormData({
@@ -108,11 +131,15 @@ function Register() {
                             <div className="flex-1 h-[1px] bg-white/30"></div>
                         </div>
             
-                        {/* SOCIAL LOGIN */}
-                        <div className="flex gap-4">
-                            <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white/20 cursor-pointer hover:bg-white/30 transition">
-                                <FaGoogle /> Continue with Google
-                            </button>
+                        {/* 3. Updated Google Login Button */}
+                        <div className="flex justify-center w-full">
+                            <GoogleLogin
+                                onSuccess={handleGoogleSuccess}
+                                onError={() => toast.error('Google Registration Failed')}
+                                theme="filled_blue"
+                                shape="pill"
+                                text="signup_with"
+                            />
                         </div>
             
         </div>

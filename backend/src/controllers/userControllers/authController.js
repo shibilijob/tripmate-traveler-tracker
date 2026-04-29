@@ -1,8 +1,46 @@
 import bcrypt from "bcrypt"
 import User from "../../models/User.js"
-import generateToken from "../../utils/genToken.js"
+import generateTokens from "../../utils/genToken.js"
 import nodemailer from "nodemailer"
 import TripRoom from "../../models/TripRoom.js"
+import jwt from "jsonwebtoken";
+import { OAuth2Client } from 'google-auth-library';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+
+const refreshAccessToken = async (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+
+        if (!refreshToken) {
+            return res.status(401).json({ message: "No Refresh Token in Cookies" });
+        }
+
+        // 1. Verify Refresh Token (Direct way)
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+        // 2. If valid, generate new Access Token
+        const accessToken = jwt.sign(
+            { id: decoded.id }, 
+            process.env.JWT_ACCESS_SECRET, 
+            { expiresIn: '15m' }
+        );
+
+        // 3. Send response
+        return res.status(200).json({ accessToken });
+
+    } catch (error) {
+        console.error("Refresh Token Error:", error.message);
+        // Token expired or invalid  send status 403
+        if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+            return res.status(403).json({ message: "Invalid or Expired Refresh Token" });
+        }
+
+        // other errors -> 500 status
+        res.status(500).json({ message: "Server Error" });
+    }
+};
 
 const signupUser =async(req,res)=>{
     try {
@@ -29,9 +67,9 @@ const signupUser =async(req,res)=>{
             role:user.role,
         }
 
-        generateToken(res,user._id)
+        const token = generateTokens(res,user._id)
 
-        res.status(201).json({message:'user registered',userData})
+        res.status(201).json({message:'user registered',userData, token})
 
         
     } catch (error) {
@@ -53,24 +91,74 @@ const loginUser = async(req,res)=>{
         if(!isMatch){
             return res.status(401).json({message:'invalid credentials'})
         }
-        generateToken(res,user._id)
+        const token = generateTokens(res,user._id)
         const userData = {
             _id:user._id,
             userName:user.userName,
             email:user.email,
             role:user.role,
         }
-        res.status(200).json({message:'login successfull',userData})
+        res.status(200).json({message:'login successfull',userData, token})
     } catch (error) {
         res.status(500).json({error:error.message})
     }
 }
 
+// login by google
+const googleLogin = async (req, res) => {
+    const { token } = req.body;
+
+    try {
+        // verify Google Token
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const { email, name, picture, sub: googleId } = ticket.getPayload();
+
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            // if there is no user then create a user
+            // make random password due to its required
+            const generatedPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
+            
+            user = await User.create({
+                userName: name,
+                email: email,
+                password: generatedPassword,
+                isVerified: true 
+            });
+        }
+
+        const appToken = generateTokens(res, user._id);
+
+        const userData = {
+            _id: user._id,
+            userName: user.userName,
+            email: user.email,
+            role: user.role,
+        };
+
+        res.status(200).json({ 
+            message: 'Google login successful', 
+            userData, 
+            token: appToken 
+        });
+
+    } catch (error) {
+        console.error("Google Auth Error:", error.message);
+        res.status(401).json({ message: 'Google authentication failed' });
+    }
+};
+
 const logoutUser = (req, res) => {
-  res.clearCookie("jwt", {
+  res.clearCookie("refreshToken", {
     httpOnly: true,
     secure: true,
-    sameSite: 'none'
+    sameSite: 'none',
+    expires: new Date(0),
   });
 
   res.status(200).json({ message: "Logged out successfully" });
@@ -201,4 +289,4 @@ const updateProfile = async (req, res) => {
 }
 
 
-export {signupUser, loginUser, logoutUser, forgotPassword, verifyOTP, resetPassword, getProfile, updateProfile};
+export {refreshAccessToken, signupUser, loginUser, googleLogin, logoutUser, forgotPassword, verifyOTP, resetPassword, getProfile, updateProfile};

@@ -9,7 +9,6 @@ function HomePage() {
         <Home/>
         <Features/>
         <Footer/>
-        
     </div>
   )
 }

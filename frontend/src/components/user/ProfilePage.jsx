@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import API from '../../api/AUTH_API';
 import { 
   FaUser, FaMapMarkedAlt, FaShieldAlt, FaHistory, FaMobileAlt, 
   FaBatteryFull, FaUserEdit, FaExternalLinkAlt, FaSignOutAlt,
@@ -9,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import USER_API from '../../api/USER_API';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../redux/slices/authSlice';
+import AUTH_API from '../../api/AUTH_API';
 
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
@@ -23,7 +23,7 @@ const ProfilePage = () => {
         setUser(data);
       } catch (error) {
         console.error("Profile fetch error:", error);
-        if (error.response?.status === 401) navigate('/login');
+        // if (error.response?.status === 401) navigate('/login');
       } finally {
         setLoading(false);
       }
@@ -34,7 +34,7 @@ const ProfilePage = () => {
 
   const handleLogout = async () => {
     try {
-      await API.post('/logout', {}, { withCredentials: true });
+      await AUTH_API.post('/logout', {}, { withCredentials: true });
     } catch (error) {
       console.error("Logout error:", error);
     } finally {

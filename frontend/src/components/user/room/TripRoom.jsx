@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   FaChevronLeft, FaCopy, FaUsers, FaComments, FaPhoneAlt, 
   FaExclamationTriangle, FaPaperPlane, FaTimes, FaBars, FaCog,
-  FaUserPlus,
+  FaUserPlus,FaTrash,
 } from "react-icons/fa";
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams } from "react-router-dom";
@@ -13,6 +13,7 @@ import InvitesTab from './InvitesTab';
 import socket from '../../../socket';
 import USER_API from '../../../api/USER_API';
 import LiveMap from '../../map/LiveMap';
+import SOSModal from '../../SOS/SOSModal';
 
 const TripRoom = () => {
   const [activeTab, setActiveTab] = useState('members');
@@ -47,6 +48,9 @@ const TripRoom = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
+
+  // SOS
+  const [isSOSOpen, setIsSOSOpen] = useState(false);
 
   const onInviteAction = (targetUserId, action) => {
     if (action === 'pending') {
@@ -93,6 +97,21 @@ const TripRoom = () => {
         autoClose: 3000,
         closeButton: true
       });
+    }
+  };
+
+  // remove a member
+  const handleRemoveMember = async (memberId) => {
+    try {
+      await USER_API.post("/removeMember", {
+        roomId: currentRoom._id,
+        memberId
+      });
+
+      dispatch(getRoomById(roomId));
+
+    } catch (err) {
+      console.log(err.response?.data || err.message);
     }
   };
 
@@ -471,17 +490,17 @@ const TripRoom = () => {
           {/* Mobile Chat Trigger */}
           <button 
             onClick={() => setIsSidebarOpen(true)}
-            className="lg:hidden absolute bottom-24 right-6 w-14 h-14 bg-[#11889c] text-white rounded-2xl shadow-2xl flex items-center justify-center z-300 active:scale-95"
+            className="lg:hidden absolute top-10 right-6 w-14 h-14 bg-[#11889c] text-white rounded-2xl shadow-2xl flex items-center justify-center z-300 active:scale-95"
           >
             <FaComments size={22}/>
           </button>
 
           {/* Voice Button */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
+          {/* <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
             <button className="flex items-center gap-3 bg-[#11889c] text-white px-10 py-4 rounded-full shadow-2xl shadow-[#11889c]/30 font-black text-xs uppercase tracking-widest hover:scale-105 transition-all">
               <FaPhoneAlt size={12}/> Join Voice
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* --- RIGHT SIDEBAR: CHAT & MEMBERS --- */}
@@ -538,21 +557,35 @@ const TripRoom = () => {
                 const userColor = member.color || "#11889c";
 
                 return (
-                  <div key={actualId} className="flex items-center gap-4">
-                    {/* Avatar using Dynamic Color */}
-                    <div 
-                      style={{ backgroundColor: `${userColor}20`, color: userColor }} 
-                      className="w-10 h-10 rounded-full flex items-center justify-center font-black"
-                    >
-                      {member.userName?.charAt(0).toUpperCase()}
+                  <div key={actualId} className="flex items-center justify-between gap-4">
+
+                    {/* LEFT SIDE */}
+                    <div className="flex items-center gap-4">
+                      <div 
+                        style={{ backgroundColor: `${userColor}20`, color: userColor }} 
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-black"
+                      >
+                        {member.userName?.charAt(0).toUpperCase()}
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-black text-slate-700">
+                          {member.userName}
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                          Current Speed : {liveSpeed} km/h
+                        </p>
+                      </div>
                     </div>
 
-                    <div>
-                      <p className="text-sm font-black text-slate-700">{member.userName}</p>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">
-                        Current Speed : {liveSpeed} km/h
-                      </p>
-                    </div>
+                    {/* RIGHT SIDE (DELETE BUTTON) */}
+                    {isLeader && actualId !== user._id && (
+                      <FaTrash 
+                        onClick={() => handleRemoveMember(actualId)}
+                        className="text-red-500 text-lg font-bold cursor-pointer hover:text-red-700"
+                      />
+                    )}
+                    
                   </div>
                 );
               })}
@@ -683,6 +716,7 @@ const TripRoom = () => {
             {activeTab === 'invites' && (
             <InvitesTab
               invites={currentRoom?.invites} 
+              invitedByEmail={currentRoom?.invitedByEmail}
               onAction={onInviteAction} 
             />
             )}
@@ -690,7 +724,9 @@ const TripRoom = () => {
 
           {/* SOS Section */}
           <div className="p-6 border-t border-slate-50 bg-slate-50/50">
-            <button className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-red-100 animate-pulse">
+            <button 
+            onClick={() => setIsSOSOpen(true)}
+            className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-red-100 animate-pulse">
               <FaExclamationTriangle size={14}/> Emergency SOS
             </button>
           </div>
@@ -822,6 +858,15 @@ const TripRoom = () => {
         </div>
       </div>
     )}
+
+    {/* SOS Modal Component */}
+      <SOSModal 
+        isOpen={isSOSOpen} 
+        onClose={() => setIsSOSOpen(false)} 
+        roomId={roomId} 
+        currentUser={user} 
+        socket={socket} 
+      />
       
       {/* Mobile Sidebar Backdrop */}
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55]"/>}
